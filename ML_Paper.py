@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
 
 # Load the dataset
-data = pd.read_csv("ModeChoiceOptima.txt", sep='\t')  # Adjust the file path accordingly
+data = pd.read_csv("data/ModeChoiceOptima.txt", sep='\t')  # Adjust the file path accordingly
 
 # Remove rows with missing values in TripPurpose, ReportedDuration, and age
 data = data[(data['TripPurpose'] != -1) & (data['ReportedDuration'] != -1) & (data['age'] != -1)]
