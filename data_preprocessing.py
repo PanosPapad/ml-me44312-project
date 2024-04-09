@@ -5,7 +5,8 @@ from matplotlib import pyplot as plt
 
 def cleanup_dataset(data):
     # Deleting columns that are not needed
-    columns_to_remove = ['Envir', 'Mobil', 'ResidCh', 'LifSty',  # Categorical variables deleted
+    columns_to_remove = ['ID',
+                         'Envir', 'Mobil', 'ResidCh', 'LifSty',  # Categorical variables deleted
                          'CostCarCHF', 'CalculatedIncome', 'CoderegionCAR', 'LangCode', 'OwnHouse', 'UrbRur',
                          # Variables with duplicates
                          'NbBicy', 'NbCellPhones', 'NbBicyChild', 'NbRoomsHouse', 'ClassifCodeLine',
@@ -28,27 +29,35 @@ def cleanup_dataset(data):
     filtered_data = data.drop(
         columns=[col for col in data.columns if any(string in col for string in columns_to_remove)])
     # Save the filtered data to a new CSV file
+
+    # Remove all rows without a mode choice
+    filtered_data = filtered_data[filtered_data['Choice'] != -1]
+
+    # Save the filtered data to a new CSV file
     filtered_data.to_csv('filtered_file.csv', index=False)
 
-    # High correlation threshold
-    threshold = 0.70
-    # Calculate the correlation matrix
-    corr = filtered_data.corr()
+    """A Heatmap to show the correlation between features"""
+    # # High correlation threshold
+    # threshold = 0.70
+    # # Calculate the correlation matrix
+    # corr = filtered_data.corr()
+    #
+    # # Plot the correlation heatmap
+    # plt.figure(figsize=(40, 40))
+    # sns.heatmap(corr, annot=True, cmap='coolwarm', fmt=".2f")
+    # plt.title("Correlation Matrix of Features")
+    # plt.show()
+    #
+    # # Extract highly correlated features
+    # highly_correlated_features = set()
+    # for i in range(len(corr.columns)):
+    #     for j in range(i + 1, len(corr.columns)):
+    #         if abs(corr.iloc[i, j]) >= threshold:
+    #             colname_i = corr.columns[i]
+    #             colname_j = corr.columns[j]
+    #             highly_correlated_features.add(colname_i)
+    #             highly_correlated_features.add(colname_j)
+    #
+    # print("Highly correlated features (>", threshold, "):", sorted(highly_correlated_features))
 
-    # Plot the correlation heatmap
-    plt.figure(figsize=(40, 40))
-    sns.heatmap(corr, annot=True, cmap='coolwarm', fmt=".2f")
-    plt.title("Correlation Matrix of Features")
-    plt.show()
-
-    # Extract highly correlated features
-    highly_correlated_features = set()
-    for i in range(len(corr.columns)):
-        for j in range(i + 1, len(corr.columns)):
-            if abs(corr.iloc[i, j]) >= threshold:
-                colname_i = corr.columns[i]
-                colname_j = corr.columns[j]
-                highly_correlated_features.add(colname_i)
-                highly_correlated_features.add(colname_j)
-
-    print("Highly correlated features (>", threshold, "):", sorted(highly_correlated_features))
+    return filtered_data
