@@ -11,7 +11,8 @@ def cleanup_dataset(data):
                          # Variables with duplicates
                          'NbBicy', 'NbCellPhones', 'NbBicyChild', 'NbRoomsHouse', 'ClassifCodeLine',
                          # Variables not useful because subset of other variable
-                         'NbTV', 'NewsPaperSubs', ]  # Potentially irrelevant variables that may cause noise
+                         'NbTV', 'NewsPaperSubs',
+                         'TimePT', 'TimeCar', 'MarginalCostPT', 'WaitingTimePT', 'WalkingTimePT', 'BirthYear', 'Weight', 'CostCar']  # Potentially irrelevant variables that may cause noise
 
     # CostCarCHF is a duplicate of CostCar
     # CalculatedIncome is a duplicate of Income
