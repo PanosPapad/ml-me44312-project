@@ -45,7 +45,7 @@ def cleanup_dataset(data: pd.DataFrame) -> pd.DataFrame:
     filtered_data = filtered_data[filtered_data['Choice'] != -1]
 
     # Save the filtered data to a new CSV file
-    filtered_data.to_csv('filtered_file.csv', index=False)
+    filtered_data.to_csv('data/filtered_file.csv', index=False)
 
     return filtered_data
 
