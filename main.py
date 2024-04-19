@@ -1,27 +1,50 @@
-import pandas as pd
 import os
-from data_preprocessing import cleanup_dataset
-import statsmodels.api as sm
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
+import warnings
+from sklearn.exceptions import ConvergenceWarning
+
+import pandas as pd
+import data_preprocessing as dp
+import data_modelling as dm
+import data_analysis as da
+from sklearn.linear_model import LogisticRegressionCV
 
 
-path = os.getcwd() + '/data/ModeChoiceOptima.txt'
+# Suppresses convergence warnings from sag and saga solvers when testing solvers
+warnings.filterwarnings("ignore", category=ConvergenceWarning)
+
+# Parameters
+path = os.getcwd() + '/data/ModeChoiceOptima.txt'  # Data set path
+class_names = ['Public Transports', 'Private Modes', 'Soft Modes']  # Classification names
+test_solvers = False  # If solvers for logistic regression should be tested
+
+# Read in data set as pandas DataFrame
 data = pd.read_csv(path, delimiter='\t')
 
-filtered_data = cleanup_dataset(data)
+# Clean the data set using the data_preprocessing cleanup method
+filtered_data = dp.cleanup_dataset(data)
 
-print(filtered_data.describe())
+# Analyse cleaned up data
+da.data_correlation('data/filtered_file.csv', 0.6)  # Generates correlation matrix
+dp.descr_data(filtered_data)  # Describes data
 
-X = filtered_data.drop('Choice', axis=1)
-y = filtered_data['Choice']
+# Split data in train and test sets and scales it
+X, X_train, X_test, X_scaled, X_train_scaled, X_test_scaled, Y, Y_train, Y_test = dm.split_data(filtered_data)
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# If testing different logistic regression solvers, creates confusion matrices for each solver
+if test_solvers:
+    dm.compare_lr_solvers(X_scaled, X_test_scaled, Y, Y_test, class_names)
 
-scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
+# Create logistic regression model based on scaled data and cross-fold validation hyperparameter tuning
+model = LogisticRegressionCV(random_state=0, max_iter=200, class_weight='balanced', cv=5).fit(X_scaled, Y)
 
-regression = LogisticRegression(random_state=0, max_iter=200).fit(X_train_scaled, y_train)
-print(regression.score(X_test_scaled, y_test))
+# Check model performance using confusion matrices
+da.confusion_matrices(model, X_test_scaled, Y_test, class_names)
+
+# Calculate SHAP values using the model and the data
+shap_values = dm.shap_val(model, X_train_scaled, X, X_test, X_test_scaled)
+
+# Plot the SHAP values as bar, beeswarm, and scatter plots
+da.shap_plot(shap_values, class_names, 'bar')
+da.shap_plot(shap_values, class_names, 'beeswarm')
+da.shap_plot(shap_values, class_names, 'scatter')
+da.shap_sum_bar_plot(shap_values, class_names)
