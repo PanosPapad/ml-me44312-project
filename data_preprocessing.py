@@ -1,18 +1,28 @@
-import seaborn as sns
-
-from matplotlib import pyplot as plt
+import pandas as pd
 
 
-def cleanup_dataset(data):
+def cleanup_dataset(data: pd.DataFrame) -> pd.DataFrame:
+    """
+    Removes specific features from the data set and removes entries with no choice specified.
+
+    :param data: The ModeChoiceOptima data set as a DataFrame.
+    :return:     DataFrame without the removed features and entries.
+    """
     # Deleting columns that are not needed
     columns_to_remove = ['ID',
-                         'Envir', 'Mobil', 'ResidCh', 'LifSty',  # Categorical variables deleted
+                         'Envir', 'Mobil', 'ResidCh', 'LifSty',
+                         # Attitude variables deleted
                          'CostCarCHF', 'CalculatedIncome', 'CoderegionCAR', 'LangCode', 'OwnHouse', 'UrbRur',
                          # Variables with duplicates
                          'NbBicy', 'NbCellPhones', 'NbBicyChild', 'NbRoomsHouse', 'ClassifCodeLine',
                          # Variables not useful because subset of other variable
                          'NbTV', 'NewsPaperSubs',
-                         'TimePT', 'TimeCar', 'MarginalCostPT', 'WaitingTimePT', 'WalkingTimePT', 'BirthYear', 'Weight', 'CostCar']  # Potentially irrelevant variables that may cause noise
+                         # Potentially irrelevant variables that may cause noise
+                         'TimePT', 'TimeCar', 'MarginalCostPT', 'WaitingTimePT',
+                         'WalkingTimePT', 'BirthYear', 'Weight', 'CostCar',
+                         # Part of the first set of correlation removals
+                         'CostPT', 'InVehicleTime', 'NbChild', 'ReportedDuration']
+                         # Part of the second set of correlation removals
 
     # CostCarCHF is a duplicate of CostCar
     # CalculatedIncome is a duplicate of Income
@@ -37,28 +47,19 @@ def cleanup_dataset(data):
     # Save the filtered data to a new CSV file
     filtered_data.to_csv('filtered_file.csv', index=False)
 
-    """A Heatmap to show the correlation between features"""
-    # # High correlation threshold
-    # threshold = 0.70
-    # # Calculate the correlation matrix
-    # corr = filtered_data.corr()
-    #
-    # # Plot the correlation heatmap
-    # plt.figure(figsize=(40, 40))
-    # sns.heatmap(corr, annot=True, cmap='coolwarm', fmt=".2f")
-    # plt.title("Correlation Matrix of Features")
-    # plt.show()
-    #
-    # # Extract highly correlated features
-    # highly_correlated_features = set()
-    # for i in range(len(corr.columns)):
-    #     for j in range(i + 1, len(corr.columns)):
-    #         if abs(corr.iloc[i, j]) >= threshold:
-    #             colname_i = corr.columns[i]
-    #             colname_j = corr.columns[j]
-    #             highly_correlated_features.add(colname_i)
-    #             highly_correlated_features.add(colname_j)
-    #
-    # print("Highly correlated features (>", threshold, "):", sorted(highly_correlated_features))
-
     return filtered_data
+
+
+def descr_data(df: pd.DataFrame, latex: bool = False) -> None:
+    """
+    Prints the statistical values of a DataFrame using the describe() method,
+    possibly as a latex table.
+
+    :param df:    The DataFrame which should be described.
+    :param latex: Boolean denoting if the description should be printed as a latex table.
+    :return:      None.
+    """
+    # Turn floats into strings with two decimals
+    out = df.describe().applymap(lambda f: format(f, '.2f').rstrip('0').rstrip('.')).T
+    # Print DataFrame or latex version of DataFrame
+    print(out.style.to_latex() if latex else out)

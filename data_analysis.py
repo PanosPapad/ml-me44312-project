@@ -1,10 +1,11 @@
+from typing import Any
 import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
 import pandas as pd
 import numpy as np
 import shap
-from shap import Explainer
+from shap import Explanation
 from sklearn.metrics import ConfusionMatrixDisplay
 
 
@@ -17,11 +18,11 @@ def class_to_abbr(c: str) -> str:
     """
     match c:
         case 'Public Transports':
-            abbr = 'PT_'
+            abbr = 'PT'
         case 'Private Modes':
-            abbr = 'PM_'
+            abbr = 'PM'
         case 'Soft Modes':
-            abbr = 'SM_'
+            abbr = 'SM'
         case _:
             abbr = ''
 
@@ -102,7 +103,7 @@ def pretty_plot(y_label: str, y_font: int, title: str, title_font: int, title_x:
     plt.show()
 
 
-def shap_plot(shap_val: Explainer, class_names: list[str], plot_type: str, save: bool = False) -> None:
+def shap_plot(shap_val: Explanation, class_names: list[str], plot_type: str, save: bool = False) -> None:
     """
     Plots SHAP values in a specified plot type.
 
@@ -114,33 +115,54 @@ def shap_plot(shap_val: Explainer, class_names: list[str], plot_type: str, save:
     """
     # For each classification choice, show a plot
     for i, c in enumerate(class_names):
+        # Set shared labels and title
+        ylabel = 'Features'
+        title = 'Mean SHAP values for ' + c
         # Plot the requested plot type
         match plot_type:
             case 'bar':
                 shap.plots.bar(shap_val[:, :, i], show=False)
             case 'beeswarm':
                 shap.plots.beeswarm(shap_val[:, :, i], show=False)
+                title = 'SHAP values for ' + c
+            case 'scatter':
+                # Generate SHAP values for each feature
+                df = pd.DataFrame(columns=['SHAP_value', 'Feature'])
+                for f in range(len(shap_val.feature_names)):
+                    df.loc[len(df)] = [np.mean(np.absolute(shap_val[:, f, i].values)), shap_val.feature_names[f]]
+
+                # Sort SHAP values such that the most important one is at the top
+                df = df.sort_values(by=['SHAP_value'], ascending=False)
+
+                # Take the nine most important features
+                imp_feat = df['Feature'].tolist()[:9]
+
+                # Plot the SHAP values of the nine most important features
+                shap.plots.scatter(shap_val[:, imp_feat, 0], show=False)
+                ylabel = f"SHAP value\n(higher means more likely to take {class_to_abbr(c)})"
+                title = ''
             case _:
                 shap.plots.bar(shap_val[:, :, i], show=False)
 
         # File to save to
-        file = class_to_abbr(c) + 'mean_SHAP_' + plot_type
+        file = class_to_abbr(c) + '_SHAP_' + plot_type
 
-        pretty_plot('Features', 14, 'Mean SHAP values for ' + c, 20, 0.25, 1, file=file, save=save)
+        pretty_plot(ylabel, 14, title, 20, 0.25, 1, file=file, save=save)
 
 
-def confusion_matrices(model, X_test: pd.DataFrame, y_test: pd.DataFrame, class_names: list[str],
-                       save: bool = False) -> None:
+def confusion_matrices(model: Any, X_test_scaled: pd.DataFrame, y_test: pd.Series, class_names: list[str],
+                       save: bool = False, solver: str = 'lbfgs') -> None:
     """
     Plots the normalized and non-normalized confusion matrices of a machine learning model's
     prediction on the test set.
 
-    :param model:       Fitted machine learning model on a train set.
-    :param X_test:      Pandas DataFrame containing the features of the test set.
-    :param y_test:      Pandas DataFrame containing the true classification labels of the test set.
-    :param class_names: List of strings representing the names of the classification choices.
-    :param save:        Boolean denoting if the resulting images should be saved.
-    :return:            None.
+    :param model:         Fitted machine learning model on a train set.
+    :param X_test_scaled: Pandas DataFrame containing the scaled features of the test set.
+    :param y_test:        Pandas DataFrame containing the true classification labels of the test set.
+    :param class_names:   List of strings representing the names of the classification choices.
+    :param save:          Boolean denoting if the resulting images should be saved.
+    :param solver:        String denoting which solving technology was used in model creation.
+    :return:              None.
     """
     # The two matrix titles
     titles_options = [
@@ -152,7 +174,7 @@ def confusion_matrices(model, X_test: pd.DataFrame, y_test: pd.DataFrame, class_
     for title, normalize in titles_options:
         fig = ConfusionMatrixDisplay.from_estimator(
             model,
-            X_test,
+            X_test_scaled,
             y_test,
             display_labels=class_names,
             cmap=plt.cm.Blues,
@@ -164,13 +186,13 @@ def confusion_matrices(model, X_test: pd.DataFrame, y_test: pd.DataFrame, class_
         plt.tight_layout()
 
         # File to save to
-        file = 'confusion_matrix'
+        file = solver + '_confusion_matrix'
         save_fig(file + '_norm' if normalize else file, save)
 
     plt.show()
 
 
-def shap_sum_bar_plot(shap_val: Explainer, class_names: list[str]) -> None:
+def shap_sum_bar_plot(shap_val: Explanation, class_names: list[str]) -> None:
     """
     Plots the mean of the absolute SHAP values of a machine learning model for each
     classification choice in an aggregated bar plot.
